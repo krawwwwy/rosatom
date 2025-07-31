@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.so
+*.dylib
+*.dll
+
+# Go specific
+vendor/
+*.mod.bak
+*.sum.bak
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README*.md
+docs/
+
+# Local configs (keeping only prod.yaml)
+config/local.yaml
+config/dev.yaml
+
+# Node modules (если есть)
+node_modules/
+
+# Coverage
+*.out
+coverage.html 
