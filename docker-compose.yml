@@ -15,7 +15,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rosatom -d rosatom"]
       interval: 30s
-      timeout: 10s
+      timeout: 100s
       retries: 3
 
   sso:
