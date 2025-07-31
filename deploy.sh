@@ -12,6 +12,8 @@ if ! command -v docker &> /dev/null; then
     rm get-docker.sh
     systemctl enable docker
     systemctl start docker
+    usermod -aG docker $USER
+    echo "✅ Docker установлен. Перелогиньтесь для применения прав"
 fi
 
 # Проверяем что Docker Compose установлен
@@ -29,50 +31,63 @@ docker-compose down --remove-orphans || true
 
 # Удаляем старые образы
 echo "🗑️ Удаляем старые образы..."
-docker system prune -f
+docker system prune -f || true
 
-# Собираем и запускаем
-echo "🏗️ Собираем образы..."
-docker-compose build --no-cache
+# Собираем и запускаем контейнеры
+echo "🔨 Собираем и запускаем контейнеры..."
+docker-compose up --build -d
 
-echo "🚀 Запускаем сервисы..."
-docker-compose up -d
+# Ждем запуска PostgreSQL
+echo "⏳ Ждем запуска PostgreSQL..."
+for i in {1..30}; do
+    if docker-compose exec -T postgres pg_isready -U rosatom -d rosatom > /dev/null 2>&1; then
+        echo "✅ PostgreSQL готов"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ PostgreSQL не запустился за 30 попыток"
+        docker-compose logs postgres
+        exit 1
+    fi
+    echo "⏳ Ждем PostgreSQL... попытка $i/30"
+    sleep 2
+done
 
-# Ждем поднятия PostgreSQL
-echo "⏳ Ждем готовности PostgreSQL..."
-sleep 15
+# Запускаем миграции SSO
+echo "📦 Запускаем миграции SSO..."
+if docker-compose exec -T sso sh -c "export DSN='postgres://rosatom:rosatom@postgres:5432/rosatom?sslmode=disable' && go run ./cmd/migrator/postgres/main.go -migrations-path=./migrations/postgresql"; then
+    echo "✅ Миграции SSO выполнены"
+else
+    echo "❌ Ошибка миграций SSO"
+    docker-compose logs sso
+    exit 1
+fi
 
-# Проверяем что PostgreSQL готов
-echo "🔍 Проверяем подключение к PostgreSQL..."
-docker-compose exec postgres pg_isready -U rosatom -d rosatom || sleep 10
+# Запускаем миграции telephone_book
+echo "📦 Запускаем миграции telephone_book..."
+if docker-compose exec -T telephone-book sh -c "export DSN='postgresql://rosatom:rosatom@postgres:5432/rosatom?sslmode=disable' && go run ./cmd/migrator/main.go -migrations-path=./migrations"; then
+    echo "✅ Миграции telephone_book выполнены"
+else
+    echo "❌ Ошибка миграций telephone_book"
+    docker-compose logs telephone-book
+    exit 1
+fi
 
-# Запускаем миграции
-echo "📋 Применяем миграции..."
+# Проверяем что таблицы созданы
+echo "🔍 Проверяем созданные таблицы..."
+echo "=== Основные таблицы ==="
+docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt"
+echo "=== Схема grafit ==="
+docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt grafit.*"
+echo "=== Схема giredmet ==="
+docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt giredmet.*"
 
-# Миграции для SSO (в схему public)
-echo "   - SSO миграции..."
-docker-compose exec -T sso sh -c "export DSN='postgres://rosatom:rosatom@postgres:5432/rosatom?sslmode=disable' && go run ./cmd/migrator/postgres/main.go -migrations-path=./migrations/postgresql" || echo "❌ Ошибка SSO миграций"
+# Проверяем статус контейнеров
+echo "📊 Статус контейнеров:"
+docker-compose ps
 
-# Миграции для telephone_book (в схемы grafit и giredmet)
-echo "   - Telephone book миграции..."
-docker-compose exec -T telephone-book sh -c "export DSN='postgresql://rosatom:rosatom@postgres:5432/rosatom?sslmode=disable' && go run ./cmd/migrator/main.go -migrations-path=./migrations" || echo "❌ Ошибка telephone_book миграций"
-
-echo "✅ Деплой завершен!"
 echo ""
-echo "🌐 Сервисы доступны по адресам:"
-echo "   - Фронтенд: http://$(hostname -I | awk '{print $1}')"
-echo "   - API: http://$(hostname -I | awk '{print $1}'):8080"
-echo "   - Swagger: http://$(hostname -I | awk '{print $1}')/swagger/"
-echo "   - SSO gRPC: $(hostname -I | awk '{print $1}'):44044"
-echo ""
-echo "📊 Проверить что все работает:"
-echo "   curl http://$(hostname -I | awk '{print $1}')/swagger/ # должен отвечать"
-echo "   docker-compose ps  # статус сервисов"
-echo ""
-echo "📊 Логи сервисов:"
-echo "   docker-compose logs -f [sso|telephone-book|postgres|nginx]"
-echo ""
-echo "🔧 Управление:"
-echo "   docker-compose ps      # статус сервисов"
-echo "   docker-compose restart # перезапуск"
-echo "   docker-compose down    # остановка" 
+echo "🎉 Деплой завершен успешно!"
+echo "📱 Приложение доступно по адресу: http://localhost"
+echo "📚 Swagger документация: http://localhost/swagger/"
+echo "🗄️ PostgreSQL: localhost:5432 (rosatom/rosatom)" 
