@@ -1,0 +1,13 @@
+[submodule "sso"]
+    path = sso
+    url = https://github.com/krawwwwy/sso/tree/rosatom
+
+[submodule "telephone_book"]
+    path = telephone_book
+    url = https://github.com/krawwwwy/telephone_book/tree/lesha%2B
+    sparse-checkout = telephone_book
+
+[submodule "protos"]
+    path = protos
+    url = https://github.com/krawwwwy/protos/tree/rosatom
+    sparse-checkout = protos
