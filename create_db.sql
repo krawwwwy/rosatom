@@ -1,0 +1,3 @@
+CREATE DATABASE rosatom;
+CREATE USER rosatom WITH PASSWORD 'rosatom';
+GRANT ALL PRIVILEGES ON DATABASE rosatom TO rosatom; 

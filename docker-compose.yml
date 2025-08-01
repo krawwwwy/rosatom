@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: rosatom
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./init-all-migrations.sql:/docker-entrypoint-initdb.d/init-all-migrations.sql
     ports:
       - "5432:5432"
     networks:
@@ -15,7 +15,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rosatom -d rosatom"]
       interval: 30s
-      timeout: 100s
+      timeout: 10s
       retries: 3
 
   sso:

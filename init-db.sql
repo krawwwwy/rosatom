@@ -1,5 +1,7 @@
 -- Подключаемся к базе rosatom (создается автоматически через POSTGRES_DB)
 -- Создаем схемы для разных институтов
+CREATE DATABASE IF NOT EXISTS rosatom;
+\c rosatom  
 CREATE SCHEMA IF NOT EXISTS grafit;
 CREATE SCHEMA IF NOT EXISTS giredmet;
 
