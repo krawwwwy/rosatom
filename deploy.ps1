@@ -54,6 +54,9 @@ docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\dt giredmet.*"
 Write-Host "Status kontejnerov:" -ForegroundColor Cyan
 docker-compose ps
 
+Write-Host "Delaem krawy adminom :" -ForegroundColor Cyan
+docker-compose up --build -d telephone-book
+
 Write-Host ""
 Write-Host "Deploj zavershen uspeshno!" -ForegroundColor Green
 Write-Host "Prilozhenie dostupno po adresu: http://localhost" -ForegroundColor Cyan
