@@ -59,7 +59,14 @@ docker-compose up --build -d telephone-book
 
 Write-Host ""
 Write-Host "Deploj zavershen uspeshno!" -ForegroundColor Green
-Write-Host "Prilozhenie dostupno po adresu: http://localhost" -ForegroundColor Cyan
-Write-Host "Swagger dokumentaciya: http://localhost/swagger/" -ForegroundColor Cyan
-Write-Host "PostgreSQL: localhost:5432 (rosatom/rosatom)" -ForegroundColor Cyan
-Write-Host "Test user: admin@example.com / admin" -ForegroundColor Yellow 
+Write-Host "Prilozhenie dostupno po adresu:" -ForegroundColor Cyan
+Write-Host "  - Lokalno: http://localhost" -ForegroundColor Cyan  
+Write-Host "  - Po seti: http://<IP-adres-mashiny>" -ForegroundColor Yellow
+Write-Host "Swagger dokumentaciya:" -ForegroundColor Cyan
+Write-Host "  - Lokalno: http://localhost/swagger/" -ForegroundColor Cyan
+Write-Host "  - Po seti: http://<IP-adres-mashiny>/swagger/" -ForegroundColor Yellow
+Write-Host "PostgreSQL: <IP-adres-mashiny>:5432 (rosatom/rosatom)" -ForegroundColor Cyan
+Write-Host "Test user: admin@example.com / admin" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Chtoby uznat IP-adres mashiny, vypolnite:" -ForegroundColor Magenta
+Write-Host "  ipconfig | findstr IPv4" -ForegroundColor White 
