@@ -2,7 +2,7 @@
 set -e
 echo "🚀 Запуск деплоя проекта rosatom..."
 
-# Проверяем что Docker установлен
+# Проверка наличия Docker
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker не установлен. Устанавливаем..."
     curl -fsSL https://get.docker.com -o get-docker.sh
@@ -14,7 +14,7 @@ if ! command -v docker &> /dev/null; then
     echo "✅ Docker установлен. Перелогиньтесь для применения прав"
 fi
 
-# Проверяем что Docker Compose установлен
+# Проверка наличия Docker Compose
 if ! command -v docker-compose &> /dev/null; then
     echo "❌ Docker Compose не установлен. Устанавливаем..."
     curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -23,26 +23,26 @@ fi
 
 echo "✅ Docker и Docker Compose готовы"
 
-# Проверяем что Docker запущен
+# Проверка, что Docker запущен
 if ! docker ps &> /dev/null; then
     echo "❌ Docker не запущен. Запустите Docker."
     exit 1
 fi
 
-# Останавливаем существующие контейнеры
+# Останавливаем контейнеры
 echo "🛑 Останавливаем существующие контейнеры..."
 docker-compose down -v
 
-# Удаляем старые образы
+# Чистим старые образы
 echo "🗑️ Удаляем старые образы..."
 docker system prune -f
 
-# Собираем и запускаем контейнеры
-echo "🔨 Собираем и запускаем контейнеры..."
-docker-compose up --build -d
+# Запускаем все контейнеры КРОМЕ telephone-book
+echo "🔨 Запускаем основные контейнеры (без telephone-book)..."
+docker-compose up --build -d postgres sso
 
-# Ждем запуска PostgreSQL
-echo "⏳ Ждем запуска PostgreSQL..."
+# Ждём PostgreSQL
+echo "⏳ Ждём запуска PostgreSQL..."
 retries=30
 for ((i=1; i<=$retries; i++)); do
     if docker-compose exec -T postgres pg_isready -U rosatom -d rosatom &> /dev/null; then
@@ -53,29 +53,42 @@ for ((i=1; i<=$retries; i++)); do
         echo "❌ PostgreSQL не запустился за $retries попыток"
         exit 1
     fi
-    echo "⏳ Ждем PostgreSQL... попытка $i/$retries"
+    echo "⏳ Ждём PostgreSQL... попытка $i/$retries"
     sleep 2
 done
 
-# Проверяем что таблицы созданы
+# Ждём SSO
+echo "⏳ Ждём запуска SSO..."
+for ((i=1; i<=$retries; i++)); do
+    if docker-compose exec -T sso bash -c "nc -z localhost 44044" &> /dev/null; then
+        echo "✅ SSO готов"
+        break
+    fi
+    if [ $i -eq $retries ]; then
+        echo "❌ SSO не запустился за $retries попыток"
+        exit 1
+    fi
+    echo "⏳ Ждём SSO... попытка $i/$retries"
+    sleep 2
+done
+
+# Проверка таблиц
 echo "🔍 Проверяем созданные таблицы..."
-echo "=== Основные таблицы ==="
 docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt"
-echo "=== Схема grafit ==="
 docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt grafit.*"
-echo "=== Схема giredmet ==="
 docker-compose exec -T postgres psql -U rosatom -d rosatom -c "\\dt giredmet.*"
 
-# Проверяем статус контейнеров
+# Запускаем telephone-book
+echo "📞 Запускаем telephone-book..."
+docker-compose up --build -d telephone-book
+
+# Статус контейнеров
 echo "📊 Статус контейнеров:"
 docker-compose ps
 
-
 echo ""
 echo "🎉 Деплой завершен успешно!"
-echo "📱 Приложение доступно по адресу: http://localhost"
-echo "📚 Swagger документация: http://localhost/swagger/"
+echo "📱 Приложение: http://localhost"
+echo "📚 Swagger: http://localhost/swagger/"
 echo "🗄️ PostgreSQL: localhost:5432 (rosatom/rosatom)"
-echo "Так же можно использовать ip-адрес машины"
 echo "👤 Тестовый пользователь: krawy@krawy.ru / krawy"
-echo "ЕСли не удается войти в тестовый аккаунт, попробуйте перезагрузить страницу и войти снова"
