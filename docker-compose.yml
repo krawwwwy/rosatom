@@ -14,9 +14,10 @@ services:
       - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rosatom -d rosatom"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
 
   sso:
     build:
@@ -34,6 +35,12 @@ services:
     volumes:
       - ./sso/config/prod.yaml:/app/config/prod.yaml
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "44044"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   telephone-book:
     build:
@@ -42,8 +49,10 @@ services:
     environment:
       CONFIG_PATH: /app/config/prod.yaml
     depends_on:
-      - postgres
-      - sso
+      postgres:
+        condition: service_healthy
+      sso:
+        condition: service_healthy
     ports:
       - "8080:8080"
     networks:
@@ -52,6 +61,12 @@ services:
       - ./telephone_book/config/prod.yaml:/app/config/prod.yaml
       - ./telephone_book/frontend:/app/frontend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   nginx:
     image: nginx:alpine
@@ -61,14 +76,21 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./telephone_book/frontend:/usr/share/nginx/html
     depends_on:
-      - telephone-book
+      telephone-book:
+        condition: service_healthy
     networks:
       - app-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "80"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
 volumes:
   postgres_data:
 
 networks:
   app-network:
-    driver: bridge 
+    driver: bridge
